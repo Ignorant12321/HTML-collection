@@ -2,7 +2,7 @@
 
 AI辅助制作的HTML项目合集
 
-## bookmark_editor
+## Edge收藏夹编辑器【bookmark_editor】
 
 ### Github地址
 
@@ -13,3 +13,23 @@ AI辅助制作的HTML项目合集
 [edge-bookmark-editor.pages.dev](https://edge-bookmark-editor.pages.dev/)
 
 ![image-20260414170040211](README.assets/image-20260414170040211.png)
+
+## 战力附魔系统【Enchantment-System】
+
+### Github地址
+
+[Ignorant12321/Enchantment-System: 附魔战力系统](https://github.com/Ignorant12321/Enchantment-System)
+
+### 示例网址
+
+[附魔战力系统](https://enchantment-system.pages.dev/)
+
+## 棋盘分析系统【chessboard-lottery】
+
+### Github地址
+
+[Ignorant12321/Chessboard-lottery: 一个对棋盘系统的分析工具](https://github.com/Ignorant12321/Chessboard-lottery)
+
+### 示例网址
+
+[Chess Board](https://chessboard-lottery.pages.dev/)
