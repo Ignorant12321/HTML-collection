@@ -5,6 +5,17 @@ import { createActions } from "./actions.js";
 import { renderTree, renderMoveTree } from "./render-tree.js";
 import { renderList, renderStats } from "./render-list.js";
 import { renderEditor } from "./render-editor.js";
+import { initI18n, toggleLanguage, t } from "../i18n/index.js";
+
+function formatExportTimestamp(date=new Date()){
+  const yyyy = String(date.getFullYear());
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mi = String(date.getMinutes()).padStart(2, "0");
+  const ss = String(date.getSeconds()).padStart(2, "0");
+  return `${yyyy}${mm}${dd}_${hh}${mi}${ss}`;
+}
 
 function collectDom(){
   return {
@@ -21,17 +32,19 @@ function collectDom(){
 
     fileHtml: document.getElementById("fileHtml"),
     fileJson: document.getElementById("fileJson"),
+    fileIcon: document.getElementById("fileIcon"),
 
     searchInput: document.getElementById("searchInput"),
     btnClearSearch: document.getElementById("btnClearSearch"),
     searchScope: document.getElementById("searchScope"),
     typeFilter: document.getElementById("typeFilter"),
     btnResetFilters: document.getElementById("btnResetFilters"),
+    btnFetchMissingIcons: document.getElementById("btnFetchMissingIcons"),
+    langToggleBtn: document.getElementById("langToggleBtn"),
     themeToggleBtn: document.getElementById("themeToggleBtn"),
 
     btnAddFolderCenter: document.getElementById("btnAddFolderCenter"),
     btnAddBookmark: document.getElementById("btnAddBookmark"),
-    btnSave: document.getElementById("btnSave"),
     btnDelete: document.getElementById("btnDelete"),
     btnMove: document.getElementById("btnMove"),
 
@@ -55,10 +68,14 @@ function collectDom(){
     editorForm: document.getElementById("editorForm"),
     editorType: document.getElementById("editorType"),
     fieldUrl: document.getElementById("fieldUrl"),
+    fieldIcon: document.getElementById("fieldIcon"),
     editTitle: document.getElementById("editTitle"),
     editHref: document.getElementById("editHref"),
-    editAddDate: document.getElementById("editAddDate"),
-    editLastModified: document.getElementById("editLastModified"),
+    editIcon: document.getElementById("editIcon"),
+    btnFetchIcon: document.getElementById("btnFetchIcon"),
+    btnPickIconFile: document.getElementById("btnPickIconFile"),
+    iconPreview: document.getElementById("iconPreview"),
+    toast: document.getElementById("toast"),
   };
 }
 
@@ -126,18 +143,17 @@ export function bootstrapApp(){
   dom.actionLoadSample.onclick = actions.loadPreloaded;
 
   dom.actionExportHtml.onclick = () => {
-    if (!state.root) return alert("请先导入或载入收藏数据。");
-    downloadText("bookmarks_edited.html", serializeBookmarkHtml(state.root), "text/html;charset=utf-8");
+    if (!state.root) return alert(t("alerts.importFirst"));
+    downloadText(`bookmarks_edited_${formatExportTimestamp()}.html`, serializeBookmarkHtml(state.root), "text/html;charset=utf-8");
   };
 
   dom.actionExportJson.onclick = () => {
-    if (!state.root) return alert("请先导入或载入收藏数据。");
+    if (!state.root) return alert(t("alerts.importFirst"));
     downloadText("bookmarks_backup.json", JSON.stringify(state.root, null, 2), "application/json;charset=utf-8");
   };
 
   dom.btnAddFolderCenter.onclick = actions.addFolder;
   dom.btnAddBookmark.onclick = actions.addBookmark;
-  dom.btnSave.onclick = actions.saveEditor;
   dom.btnDelete.onclick = actions.deleteSelected;
   dom.btnMove.onclick = actions.openMoveModal;
   dom.btnCloseMoveModal.onclick = actions.closeMoveModal;
@@ -174,6 +190,12 @@ export function bootstrapApp(){
     dom.typeFilter.value = "all";
     runtime.render();
   });
+  dom.btnFetchMissingIcons.addEventListener("click", async () => {
+    await actions.fetchIconsForAllMissing();
+  });
+  dom.langToggleBtn.addEventListener("click", () => {
+    toggleLanguage(runtime);
+  });
   dom.themeToggleBtn.addEventListener("click", () => {
     const current = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
     actions.applyTheme(current === "dark" ? "light" : "dark");
@@ -192,10 +214,31 @@ export function bootstrapApp(){
     actions.importJsonText(await file.text());
     e.target.value = "";
   });
+  dom.btnFetchIcon.addEventListener("click", async () => {
+    await actions.fetchIconForSelectedBookmark();
+  });
+  dom.btnPickIconFile.addEventListener("click", () => dom.fileIcon.click());
+  dom.fileIcon.addEventListener("change", async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    await actions.loadIconFileToEditor(file);
+    actions.autosaveEditor();
+    e.target.value = "";
+  });
+  dom.editIcon.addEventListener("input", () => {
+    actions.updateIconPreview(dom.editIcon.value);
+    actions.autosaveEditor();
+  });
+  [dom.editTitle, dom.editHref].forEach(input => {
+    input.addEventListener("input", () => {
+      actions.autosaveEditor();
+    });
+  });
 
   setupSplitter(dom.splitterLeft, "left");
   setupSplitter(dom.splitterRight, "right");
 
   actions.initTheme();
-  actions.setRoot(createFolder("全部收藏"));
+  initI18n(runtime);
+  actions.setRoot(createFolder(t("defaults.rootTitle")));
 }

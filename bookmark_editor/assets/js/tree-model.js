@@ -1,5 +1,14 @@
 import { state } from "./state.js";
 
+function nowUnix(){
+  return String(Math.floor(Date.now()/1000));
+}
+
+export function touchLastModified(node){
+  if (!node || node.type !== "folder" && node.type !== "bookmark") return;
+  node.lastModified = nowUnix();
+}
+
 export function walk(node, parent=null, list=[]){
   if (!node) return list;
   list.push({node,parent});
@@ -136,6 +145,8 @@ export function moveItemToFolder(itemId, targetFolderId, targetIndex=null){
   owner.children = owner.children.filter(c => c.id !== itemId);
   if (targetIndex == null || targetIndex > target.children.length) target.children.push(item);
   else target.children.splice(targetIndex, 0, item);
+  touchLastModified(owner);
+  touchLastModified(target);
 }
 
 export function moveItemRelativeToTarget(itemId, targetId, place){
@@ -160,6 +171,8 @@ export function moveItemRelativeToTarget(itemId, targetId, place){
   const freshIndex = targetOwner.children.findIndex(x => x.id === targetId);
   const insertIndex = place === "before" ? freshIndex : freshIndex + 1;
   targetOwner.children.splice(insertIndex, 0, item);
+  touchLastModified(itemOwner);
+  touchLastModified(targetOwner);
 }
 
 export function reorderWithinFolder(folderId, itemId, targetIndex){
@@ -170,4 +183,5 @@ export function reorderWithinFolder(folderId, itemId, targetIndex){
   const [item] = folder.children.splice(idx, 1);
   if (targetIndex > idx) targetIndex--;
   folder.children.splice(targetIndex, 0, item);
+  touchLastModified(folder);
 }

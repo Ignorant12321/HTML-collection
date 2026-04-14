@@ -1,5 +1,6 @@
 import { state } from "./state.js";
 import { escapeHtml, copyTextToClipboard, openBookmarkUrl } from "./utils.js";
+import { t } from "../i18n/index.js";
 import {
   countStats,
   getCurrentFolder,
@@ -76,7 +77,7 @@ function cardDragEvents(runtime, card, item, index, currentFolder){
 
 export function renderStats(runtime){
   const s = countStats();
-  runtime.dom.stats.textContent = `网址 ${s.bookmarks}`;
+  runtime.dom.stats.textContent = t("list.treeStats", { count: s.bookmarks });
 }
 
 export function renderList(runtime){
@@ -88,17 +89,17 @@ export function renderList(runtime){
   const items = getVisibleItems();
   const currentStats = countCurrentItems(folder);
 
-  dom.listTitle.textContent = "内容：" + folder.title;
+  dom.listTitle.textContent = t("list.titlePrefix") + folder.title;
   const listStats = [];
-  if (currentStats.folders) listStats.push(`文件夹 ${currentStats.folders}`);
-  if (currentStats.bookmarks) listStats.push(`网址 ${currentStats.bookmarks}`);
+  if (currentStats.folders) listStats.push(t("list.stats.folder", { count: currentStats.folders }));
+  if (currentStats.bookmarks) listStats.push(t("list.stats.bookmark", { count: currentStats.bookmarks }));
   dom.listStats.textContent = listStats.join(" · ");
   dom.listStats.classList.toggle("hidden", listStats.length === 0);
 
   renderBreadcrumbs(runtime, folder);
 
   if (!items.length){
-    dom.list.innerHTML = `<div class="empty">这里还没有匹配内容。你可以新建文件夹、添加网址，或者切换筛选范围。</div>`;
+    dom.list.innerHTML = `<div class="empty">${escapeHtml(t("list.empty"))}</div>`;
     return;
   }
 
@@ -106,20 +107,24 @@ export function renderList(runtime){
     const card = document.createElement("div");
     card.className = "card" + (state.selectedItemId === item.id ? " active" : "");
     const isFolder = item.type === "folder";
+    const bookmarkIconHtml = item.icon
+      ? `<img class="card-favicon" src="${escapeHtml(item.icon)}" alt="" />`
+      : "🔗";
     const parent = findParentOf(item.id);
-    const pathInfo = parent && parent.id !== folder.id ? "所在路径：" + pathToNode(item.id).map(x => x.title).join(" / ") : "";
+    const pathInfo = parent && parent.id !== folder.id ? t("list.pathPrefix") + pathToNode(item.id).map(x => x.title).join(" / ") : "";
+    const itemTypeLabel = isFolder ? t("list.itemTypes.folder") : t("list.itemTypes.bookmark");
 
     card.innerHTML = `<div>
-      <div class="card-title">${isFolder ? "📁" : "🔗"} <span>${escapeHtml(item.title || "")}</span></div>
+      <div class="card-title">${isFolder ? "📁" : bookmarkIconHtml} <span>${escapeHtml(item.title || "")}</span></div>
       ${!isFolder ? `<div class="url-text">${escapeHtml(item.href || "")}</div>` : ""}
       <div class="meta">
-        <span>类型：${isFolder ? "文件夹" : "网址"}</span>
-        ${isFolder ? `<span>项目数：${item.children.length}</span>` : ""}
+        <span>${escapeHtml(t("list.metaType", { type: itemTypeLabel }))}</span>
+        ${isFolder ? `<span>${escapeHtml(t("list.metaItemCount", { count: item.children.length }))}</span>` : ""}
         ${pathInfo ? `<span>${escapeHtml(pathInfo)}</span>` : ""}
       </div>
     </div>
     <div class="actions">
-      ${isFolder ? `<button class="btn btn-open">进入</button>` : `<div class="icon-actions"><button class="icon-btn btn-copy-url" title="复制网址" aria-label="复制网址">⧉</button><button class="icon-btn btn-open-url" title="打开网址" aria-label="打开网址">↗</button></div>`}
+      ${isFolder ? `<button class="btn btn-open">${escapeHtml(t("list.buttons.enter"))}</button>` : `<div class="icon-actions"><button class="icon-btn btn-copy-url" title="${escapeHtml(t("list.buttons.copyUrl"))}" aria-label="${escapeHtml(t("list.buttons.copyUrl"))}">⧉</button><button class="icon-btn btn-open-url" title="${escapeHtml(t("list.buttons.openUrl"))}" aria-label="${escapeHtml(t("list.buttons.openUrl"))}">↗</button></div>`}
     </div>`;
 
     const btnOpen = card.querySelector(".btn-open");

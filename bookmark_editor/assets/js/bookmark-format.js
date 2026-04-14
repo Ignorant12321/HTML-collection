@@ -1,8 +1,5 @@
 import { state, uid, reseedIds } from "./state.js";
-
-function escapeAttr(s=""){
-  return String(s).replace(/[&<>\"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[ch]));
-}
+import { t } from "../i18n/index.js";
 
 export function parseBookmarkHtml(input){
   const parser = new DOMParser();
@@ -25,7 +22,7 @@ export function parseBookmarkHtml(input){
         items.push({
           id: uid(),
           type: "folder",
-          title: folderHeader.textContent?.trim() || "未命名文件夹",
+          title: folderHeader.textContent?.trim() || t("defaults.untitledFolder"),
           addDate: folderHeader.getAttribute("ADD_DATE") || "",
           lastModified: folderHeader.getAttribute("LAST_MODIFIED") || "",
           personalToolbarFolder: folderHeader.getAttribute("PERSONAL_TOOLBAR_FOLDER") || "",
@@ -35,7 +32,7 @@ export function parseBookmarkHtml(input){
         items.push({
           id: uid(),
           type: "bookmark",
-          title: link.textContent?.trim() || link.getAttribute("HREF") || "未命名网址",
+          title: link.textContent?.trim() || link.getAttribute("HREF") || t("defaults.untitledBookmark"),
           href: link.getAttribute("HREF") || "",
           addDate: link.getAttribute("ADD_DATE") || "",
           icon: link.getAttribute("ICON") || "",
@@ -46,7 +43,7 @@ export function parseBookmarkHtml(input){
     return items;
   }
 
-  return { id:uid(), type:"folder", title:"全部收藏", addDate:"", lastModified:"", children: readDL(mainDL) };
+  return { id:uid(), type:"folder", title:t("defaults.rootTitle"), addDate:"", lastModified:"", children: readDL(mainDL) };
 }
 
 export function serializeBookmarkHtml(root){
@@ -58,27 +55,54 @@ export function serializeBookmarkHtml(root){
   }
   function folderToHtml(folder, depth=1){
     const indent = "    ".repeat(depth);
+    const toolbarValue = String(folder.personalToolbarFolder || "").trim();
     const h3Attrs = [
       folder.addDate ? `ADD_DATE="${escAttr(folder.addDate)}"` : "",
       folder.lastModified ? `LAST_MODIFIED="${escAttr(folder.lastModified)}"` : "",
-      folder.personalToolbarFolder ? `PERSONAL_TOOLBAR_FOLDER="${escAttr(folder.personalToolbarFolder)}"` : "",
+      toolbarValue ? `PERSONAL_TOOLBAR_FOLDER="${escAttr(toolbarValue)}"` : "",
     ].filter(Boolean).join(" ");
     let html = `${indent}<DT><H3${h3Attrs ? " " + h3Attrs : ""}>${escText(folder.title)}</H3>\n`;
     html += `${indent}<DL><p>\n`;
     for (const child of folder.children){
       if (child.type === "folder") html += folderToHtml(child, depth+1);
-      else {
-        const attrs = [
-          child.href ? `HREF="${escAttr(child.href)}"` : `HREF=""`,
-          child.addDate ? `ADD_DATE="${escAttr(child.addDate)}"` : "",
-          child.icon ? `ICON="${escAttr(child.icon)}"` : "",
-          child.lastModified ? `LAST_MODIFIED="${escAttr(child.lastModified)}"` : "",
-        ].filter(Boolean).join(" ");
-        html += `${indent}    <DT><A ${attrs}>${escText(child.title)}</A>\n`;
-      }
+      else html += bookmarkToHtml(child, `${indent}    `);
     }
     html += `${indent}</DL><p>\n`;
     return html;
+  }
+
+  function bookmarkToHtml(bookmark, indent="    "){
+    const attrs = [
+      bookmark.href ? `HREF="${escAttr(bookmark.href)}"` : `HREF=""`,
+      bookmark.addDate ? `ADD_DATE="${escAttr(bookmark.addDate)}"` : "",
+      bookmark.icon ? `ICON="${escAttr(bookmark.icon)}"` : "",
+      bookmark.lastModified ? `LAST_MODIFIED="${escAttr(bookmark.lastModified)}"` : "",
+    ].filter(Boolean).join(" ");
+    return `${indent}<DT><A ${attrs}>${escText(bookmark.title || "")}</A>\n`;
+  }
+
+  const sourceChildren = Array.isArray(root?.children) ? root.children : [];
+  const topFolders = sourceChildren.filter(child => child.type === "folder");
+  const topBookmarks = sourceChildren.filter(child => child.type !== "folder");
+  const hasTopToolbarFolder = topFolders.some(folder => String(folder.personalToolbarFolder || "").trim());
+
+  let exportChildren = sourceChildren;
+  if (!hasTopToolbarFolder && topFolders.length > 0){
+    if (topFolders.length === 1 && topBookmarks.length === 0){
+      const onlyFolder = topFolders[0];
+      exportChildren = [{ ...onlyFolder, personalToolbarFolder: "true" }];
+    } else {
+      const now = String(Math.floor(Date.now()/1000));
+      const toolbarFolder = {
+        type: "folder",
+        title: "收藏夹栏",
+        addDate: now,
+        lastModified: now,
+        personalToolbarFolder: "true",
+        children: topFolders,
+      };
+      exportChildren = [toolbarFolder, ...topBookmarks];
+    }
   }
 
   const head = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
@@ -91,9 +115,9 @@ export function serializeBookmarkHtml(root){
 <DL><p>
 `;
 
-  const body = root.children.map(child => child.type === "folder"
+  const body = exportChildren.map(child => child.type === "folder"
     ? folderToHtml(child, 1)
-    : `    <DT><A HREF="${escapeAttr(child.href || "")}"${child.addDate ? ` ADD_DATE="${escapeAttr(child.addDate)}"` : ""}>${child.title || ""}</A>\n`
+    : bookmarkToHtml(child, "    ")
   ).join("");
 
   return head + body + `</DL><p>\n`;

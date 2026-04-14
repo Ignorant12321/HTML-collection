@@ -1,3 +1,5 @@
+import { t } from "../i18n/index.js";
+
 export const state = {
   root: null,
   originalRoot: null,
@@ -29,10 +31,11 @@ export function reseedIds(root){
   return root;
 }
 
-export function createFolder(title="新建文件夹"){
-  return {id:uid(), type:"folder", title, addDate:"", lastModified:String(Math.floor(Date.now()/1000)), children:[]};
+export function createFolder(title=t("defaults.newFolder")){
+  const now = String(Math.floor(Date.now()/1000));
+  return {id:uid(), type:"folder", title, addDate:now, lastModified:now, children:[]};
 }
 
-export function createBookmark(title="新建网址", href="https://"){
+export function createBookmark(title=t("defaults.newBookmark"), href="https://"){
   return {id:uid(), type:"bookmark", title, href, addDate:String(Math.floor(Date.now()/1000)), lastModified:""};
 }

@@ -49,9 +49,12 @@ function buildTree(runtime, container, opts={}){
 
     const label = document.createElement("div");
     label.className = "tree-label";
+    const bookmarkIconHtml = node.icon
+      ? `<img class="tree-favicon" src="${escapeHtml(node.icon)}" alt="" />`
+      : `<span class="tree-icon">🔗</span>`;
     const title = node.type === "folder"
       ? `<span class="tree-icon">📁</span><span class="tree-title">${escapeHtml(node.title)}</span><span class="tree-count">${countDirectBookmarkCount(node)}</span>`
-      : `<span class="tree-icon">🔗</span><span class="tree-title">${escapeHtml(node.title)}</span>`;
+      : `${bookmarkIconHtml}<span class="tree-title">${escapeHtml(node.title)}</span>`;
     label.innerHTML = title;
 
     row.append(indent, toggle, label);
